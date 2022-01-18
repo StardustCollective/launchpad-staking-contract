@@ -23,8 +23,8 @@ contract LatticeStakingPool is ReentrancyGuard {
         string name;
         uint256 totalAmountStaked;
         uint256 numberOfPools;
-        uint256 startBlock;
-        uint256 endBlock;
+        uint256 startTimestamp;
+        uint256 endTimestamp;
     }
 
     struct UserInfo {
@@ -85,8 +85,8 @@ contract LatticeStakingPool is ReentrancyGuard {
 
     function addProject(
         string memory _name,
-        uint256 _startBlock,
-        uint256 _endBlock
+        uint256 _startTimestamp,
+        uint256 _endTimestamp
     ) external {
         require(msg.sender == owner, "addNewProject: Caller is not the owner");
         require(
@@ -94,12 +94,12 @@ contract LatticeStakingPool is ReentrancyGuard {
             "addNewProject: Project name cannot be empty string."
         );
         require(
-            _startBlock >= block.number,
-            "addNewProject: startBlock is less than the current block number."
+            _startTimestamp >= block.timestamp,
+            "addNewProject: startTimestamp is less than the current block timestamp."
         );
         require(
-            _startBlock < _endBlock,
-            "addNewProject: startBlock is greater than or equal to the endBlock."
+            _startTimestamp < _endTimestamp,
+            "addNewProject: startTimestamp is greater than or equal to the endTimestamp."
         );
         require(
             !isProjectNameTaken[_name],
@@ -108,8 +108,8 @@ contract LatticeStakingPool is ReentrancyGuard {
 
         Project memory project;
         project.name = _name;
-        project.startBlock = _startBlock;
-        project.endBlock = _endBlock;
+        project.startTimestamp = _startTimestamp;
+        project.endTimestamp = _endTimestamp;
         project.numberOfPools = 0;
         project.totalAmountStaked = 0;
 
@@ -154,7 +154,7 @@ contract LatticeStakingPool is ReentrancyGuard {
             "disableProject: Invalid project ID."
         );
 
-        projects[_projectId].endBlock = block.number;
+        projects[_projectId].endTimestamp = block.timestamp;
 
         emit ProjectDisabled(_projectId);
     }
@@ -171,11 +171,11 @@ contract LatticeStakingPool is ReentrancyGuard {
             "deposit: Invalid pool ID."
         );
         require(
-            block.number <= projects[_projectId].endBlock,
+            block.timestamp <= projects[_projectId].endTimestamp,
             "deposit: Staking no longer permitted for this project."
         );
         require(
-            block.number >= projects[_projectId].startBlock,
+            block.timestamp >= projects[_projectId].startTimestamp,
             "deposit: Staking is not yet permitted for this project."
         );
 
@@ -227,7 +227,7 @@ contract LatticeStakingPool is ReentrancyGuard {
             "withdraw: Invalid pool ID."
         );
         require(
-            block.number > projects[_projectId].endBlock,
+            block.timestamp > projects[_projectId].endTimestamp,
             "withdraw: Not yet permitted."
         );
         require(
