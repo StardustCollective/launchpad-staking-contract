@@ -40,13 +40,6 @@ contract LatticeStakingPool is ReentrancyGuard {
 
     Project[] public projects;
 
-    /// @notice ProjectID => WhitelistedAddress
-    mapping(uint256 => mapping(address => bool))
-        public projectIdToWhitelistedAddress;
-
-    /// @notice ProjectID => WhitelistedArray
-    mapping(uint256 => address[]) private projectIdToWhitelistedArray;
-
     /// @notice ProjectID => Pool ID => User Address => amountStaked
     mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
         public userStakedAmount;
@@ -171,10 +164,6 @@ contract LatticeStakingPool is ReentrancyGuard {
         uint256 _poolId,
         uint256 _amount
     ) external nonReentrant {
-        require(
-            projectIdToWhitelistedAddress[_projectId][msg.sender],
-            "deposit: Address is not whitelisted for this project."
-        );
         require(_amount > 0, "deposit: Amount not specified.");
         require(_projectId < projects.length, "deposit: Invalid project ID.");
         require(
@@ -232,10 +221,6 @@ contract LatticeStakingPool is ReentrancyGuard {
         external
         nonReentrant
     {
-        require(
-            projectIdToWhitelistedAddress[_projectId][msg.sender],
-            "withdraw: Address is not whitelisted for this project."
-        );
         require(_projectId < projects.length, "withdraw: Invalid project ID.");
         require(
             _poolId < projects[_projectId].numberOfPools,
@@ -259,65 +244,6 @@ contract LatticeStakingPool is ReentrancyGuard {
         stakingToken.safeTransfer(msg.sender, _userStakedAmount);
 
         emit Withdraw(msg.sender, _projectId, _poolId, _userStakedAmount);
-    }
-
-    function whitelistAddresses(
-        uint256 _projectId,
-        address[] memory _newAddressesToWhitelist
-    ) external {
-        require(
-            msg.sender == owner,
-            "whitelistAddresses: Caller is not the owner"
-        );
-        require(
-            _projectId < projects.length,
-            "whitelistAddresses: Invalid project ID."
-        );
-        require(
-            _newAddressesToWhitelist.length > 0,
-            "whitelistAddresses: Addresses array is empty."
-        );
-
-        for (uint256 i = 0; i < _newAddressesToWhitelist.length; i++) {
-            if (
-                !projectIdToWhitelistedAddress[_projectId][
-                    _newAddressesToWhitelist[i]
-                ]
-            ) {
-                projectIdToWhitelistedAddress[_projectId][
-                    _newAddressesToWhitelist[i]
-                ] = true;
-                projectIdToWhitelistedArray[_projectId].push(
-                    _newAddressesToWhitelist[i]
-                );
-            }
-        }
-    }
-
-    function getWhitelistedAddressesForProject(uint256 _projectId)
-        external
-        view
-        returns (address[] memory)
-    {
-        require(
-            msg.sender == owner,
-            "getWhitelistedAddressesForProject: Caller is not the owner"
-        );
-
-        return projectIdToWhitelistedArray[_projectId];
-    }
-
-    function isAddressWhitelisted(uint256 _projectId, address _address)
-        external
-        view
-        returns (bool)
-    {
-        require(
-            _projectId < projects.length,
-            "isAddressWhitelisted: Invalid project ID."
-        );
-
-        return projectIdToWhitelistedAddress[_projectId][_address];
     }
 
     function getTotalStakingInfoForProjectPerPool(
