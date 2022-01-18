@@ -1,0 +1,15 @@
+{
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "build", "cache", "artifacts"],
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": false,
+    "target": "ES2021",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "types": ["@types/node", "@types/chai", "@types/mocha"],
+    "typeRoots": ["./node_modules/@types", "./types"]
+  }
+}

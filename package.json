@@ -1,0 +1,26 @@
+{
+  "name": "launchpad-staking-contract",
+  "version": "1.0.0",
+  "main": "",
+  "repository": "https://github.com/StardustCollective/launchpad-staking-contract",
+  "author": "Stardust Collective <info@stardustcollective.org>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@openzeppelin/contracts": "4.4.2"
+  },
+  "devDependencies": {
+    "@typechain/truffle-v5": "^7.0.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.0.0",
+    "truffle": "^5.4.29",
+    "ts-node": "^10.4.0",
+    "typechain": "^7.0.0",
+    "typescript": "^4.5.4"
+  },
+  "scripts": {
+    "build": "yarn build:contracts && yarn build:types",
+    "build:contracts": "yarn truffle compile",
+    "build:types": "yarn typechain --target=truffle-v5 'build/contracts/*.json'"
+  }
+}
