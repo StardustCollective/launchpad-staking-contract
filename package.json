@@ -12,7 +12,9 @@
   "devDependencies": {
     "@typechain/truffle-v5": "^7.0.0",
     "@types/chai": "^4.3.0",
+    "@types/luxon": "^2.0.9",
     "@types/mocha": "^9.0.0",
+    "luxon": "^2.3.0",
     "truffle": "^5.4.29",
     "ts-node": "^10.4.0",
     "typechain": "^7.0.0",
@@ -21,6 +23,7 @@
   "scripts": {
     "build": "yarn build:contracts && yarn build:types",
     "build:contracts": "yarn truffle compile",
-    "build:types": "yarn typechain --target=truffle-v5 'build/contracts/*.json'"
+    "build:types": "yarn typechain --target=truffle-v5 'build/contracts/*.json'",
+    "test": "yarn truffle test"
   }
 }
