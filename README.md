@@ -1,5 +1,8 @@
 # Lattice Launchpad - Staking Contract
 
+[![Feature Branch Build](https://github.com/StardustCollective/launchpad-staking-contract/actions/workflows/feature_branch.yml/badge.svg)](https://github.com/StardustCollective/launchpad-staking-contract/actions/workflows/feature_branch.yml) [![Software License](https://img.shields.io/badge/license-UNLICENSED-orange.svg)](package.json)
+
+
 ## Getting Started
 
 This project was built using `Node 12`, `Solidity 0.8.11`, `Truffle 5.4` and `Typescript 4.5`, to start you can install the project dependencies using `yarn`.
@@ -37,12 +40,14 @@ Ohh ps: you can write as well tests using solidity =)
 ### Build
 
 For building contracts and generate types you can use.
+
 ```
 $ yarn build
 ```
-Compiled contracts will be stored in the [build](./build/) folder and generated types in the [types/truffle-contracts](./types/truffle-contracts).
 
-You can start using contract types right away by importing types from [types/truffle-contracts](./types/truffle-contracts) or using the `artifact.require(contractName: string)` function.
+Compiled contracts will be stored in the [build](build/) folder and generated types in the [types/truffle-contracts](types/truffle-contracts/).
+
+You can start using contract types right away by importing types from [types/truffle-contracts](types/truffle-contracts/) or using the `artifact.require(contractName: string)` function.
 
 ## License
 
