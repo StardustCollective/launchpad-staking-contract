@@ -41,6 +41,10 @@ module.exports = {
    * $ truffle test --network <network-name>
    */
 
+  console: {
+    require: "./console/index.js"
+  },
+
   networks: {
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
@@ -78,11 +82,11 @@ module.exports = {
     // network_id: 2111,   // This network is yours, in the cloud.
     // production: true    // Treats this network as if it was a public net. (default: false)
     // }
-    /* test: {
+    ganache: {
       host: '127.0.0.1',
-      port: 9545,
+      port: 8646,
       network_id: "*"
-    } */
+    }
   },
 
   // Set default mocha options here, use special reporters etc.
