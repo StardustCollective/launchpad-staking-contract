@@ -96,15 +96,6 @@ export interface LatticeStakingPoolInstance extends Truffle.ContractInstance {
   ): Promise<boolean>;
 
   /**
-   * ProjectID => WhitelistedAddress
-   */
-  projectIdToWhitelistedAddress(
-    arg0: number | BN | string,
-    arg1: string,
-    txDetails?: Truffle.TransactionDetails
-  ): Promise<boolean>;
-
-  /**
    * ProjectName => ProjectID
    */
   projectNameToProjectId(
@@ -141,26 +132,26 @@ export interface LatticeStakingPoolInstance extends Truffle.ContractInstance {
   addProject: {
     (
       _name: string,
-      _startBlock: number | BN | string,
-      _endBlock: number | BN | string,
+      _startTimestamp: number | BN | string,
+      _endTimestamp: number | BN | string,
       txDetails?: Truffle.TransactionDetails
     ): Promise<Truffle.TransactionResponse<AllEvents>>;
     call(
       _name: string,
-      _startBlock: number | BN | string,
-      _endBlock: number | BN | string,
+      _startTimestamp: number | BN | string,
+      _endTimestamp: number | BN | string,
       txDetails?: Truffle.TransactionDetails
     ): Promise<void>;
     sendTransaction(
       _name: string,
-      _startBlock: number | BN | string,
-      _endBlock: number | BN | string,
+      _startTimestamp: number | BN | string,
+      _endTimestamp: number | BN | string,
       txDetails?: Truffle.TransactionDetails
     ): Promise<string>;
     estimateGas(
       _name: string,
-      _startBlock: number | BN | string,
-      _endBlock: number | BN | string,
+      _startTimestamp: number | BN | string,
+      _endTimestamp: number | BN | string,
       txDetails?: Truffle.TransactionDetails
     ): Promise<number>;
   };
@@ -257,40 +248,6 @@ export interface LatticeStakingPoolInstance extends Truffle.ContractInstance {
     ): Promise<number>;
   };
 
-  whitelistAddresses: {
-    (
-      _projectId: number | BN | string,
-      _newAddressesToWhitelist: string[],
-      txDetails?: Truffle.TransactionDetails
-    ): Promise<Truffle.TransactionResponse<AllEvents>>;
-    call(
-      _projectId: number | BN | string,
-      _newAddressesToWhitelist: string[],
-      txDetails?: Truffle.TransactionDetails
-    ): Promise<void>;
-    sendTransaction(
-      _projectId: number | BN | string,
-      _newAddressesToWhitelist: string[],
-      txDetails?: Truffle.TransactionDetails
-    ): Promise<string>;
-    estimateGas(
-      _projectId: number | BN | string,
-      _newAddressesToWhitelist: string[],
-      txDetails?: Truffle.TransactionDetails
-    ): Promise<number>;
-  };
-
-  getWhitelistedAddressesForProject(
-    _projectId: number | BN | string,
-    txDetails?: Truffle.TransactionDetails
-  ): Promise<string[]>;
-
-  isAddressWhitelisted(
-    _projectId: number | BN | string,
-    _address: string,
-    txDetails?: Truffle.TransactionDetails
-  ): Promise<boolean>;
-
   getTotalStakingInfoForProjectPerPool(
     _projectId: number | BN | string,
     _poolId: number | BN | string,
@@ -358,15 +315,6 @@ export interface LatticeStakingPoolInstance extends Truffle.ContractInstance {
     ): Promise<boolean>;
 
     /**
-     * ProjectID => WhitelistedAddress
-     */
-    projectIdToWhitelistedAddress(
-      arg0: number | BN | string,
-      arg1: string,
-      txDetails?: Truffle.TransactionDetails
-    ): Promise<boolean>;
-
-    /**
      * ProjectName => ProjectID
      */
     projectNameToProjectId(
@@ -403,26 +351,26 @@ export interface LatticeStakingPoolInstance extends Truffle.ContractInstance {
     addProject: {
       (
         _name: string,
-        _startBlock: number | BN | string,
-        _endBlock: number | BN | string,
+        _startTimestamp: number | BN | string,
+        _endTimestamp: number | BN | string,
         txDetails?: Truffle.TransactionDetails
       ): Promise<Truffle.TransactionResponse<AllEvents>>;
       call(
         _name: string,
-        _startBlock: number | BN | string,
-        _endBlock: number | BN | string,
+        _startTimestamp: number | BN | string,
+        _endTimestamp: number | BN | string,
         txDetails?: Truffle.TransactionDetails
       ): Promise<void>;
       sendTransaction(
         _name: string,
-        _startBlock: number | BN | string,
-        _endBlock: number | BN | string,
+        _startTimestamp: number | BN | string,
+        _endTimestamp: number | BN | string,
         txDetails?: Truffle.TransactionDetails
       ): Promise<string>;
       estimateGas(
         _name: string,
-        _startBlock: number | BN | string,
-        _endBlock: number | BN | string,
+        _startTimestamp: number | BN | string,
+        _endTimestamp: number | BN | string,
         txDetails?: Truffle.TransactionDetails
       ): Promise<number>;
     };
@@ -518,40 +466,6 @@ export interface LatticeStakingPoolInstance extends Truffle.ContractInstance {
         txDetails?: Truffle.TransactionDetails
       ): Promise<number>;
     };
-
-    whitelistAddresses: {
-      (
-        _projectId: number | BN | string,
-        _newAddressesToWhitelist: string[],
-        txDetails?: Truffle.TransactionDetails
-      ): Promise<Truffle.TransactionResponse<AllEvents>>;
-      call(
-        _projectId: number | BN | string,
-        _newAddressesToWhitelist: string[],
-        txDetails?: Truffle.TransactionDetails
-      ): Promise<void>;
-      sendTransaction(
-        _projectId: number | BN | string,
-        _newAddressesToWhitelist: string[],
-        txDetails?: Truffle.TransactionDetails
-      ): Promise<string>;
-      estimateGas(
-        _projectId: number | BN | string,
-        _newAddressesToWhitelist: string[],
-        txDetails?: Truffle.TransactionDetails
-      ): Promise<number>;
-    };
-
-    getWhitelistedAddressesForProject(
-      _projectId: number | BN | string,
-      txDetails?: Truffle.TransactionDetails
-    ): Promise<string[]>;
-
-    isAddressWhitelisted(
-      _projectId: number | BN | string,
-      _address: string,
-      txDetails?: Truffle.TransactionDetails
-    ): Promise<boolean>;
 
     getTotalStakingInfoForProjectPerPool(
       _projectId: number | BN | string,

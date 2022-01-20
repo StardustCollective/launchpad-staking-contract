@@ -1,3 +1,5 @@
+declare var debug: Function;
+
 declare namespace Truffle {
   interface Deployer {
     link(
