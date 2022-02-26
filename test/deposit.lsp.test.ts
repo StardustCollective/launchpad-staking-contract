@@ -1,33 +1,54 @@
-import { DateTime } from "luxon";
-import sinon, { SinonSandbox } from "sinon";
-import { LatticeTokenInstance } from "../types/truffle-contracts";
-import {
-  LatticeStakingPoolInstance,
-  Deposit,
-} from "../types/truffle-contracts/LatticeStakingPool";
-
-const LatticeToken = artifacts.require("LatticeToken");
-const LatticeStakingPool = artifacts.require("LatticeStakingPool");
+import { DateTime, DurationLike, Duration } from "luxon";
+import { expect } from "chai";
+import { Signer } from "ethers";
+import { ethers } from "hardhat";
+import { LatticeToken, LatticeStakingPool } from "./../typechain-types";
+import { DepositEvent } from "./../typechain-types/LatticeStakingPool";
 
 const epochFromDateTime = (datetime: DateTime) =>
   Math.floor(datetime.toMillis() / 1000);
 
-contract("LatticeStakingPool: deposit", (accounts) => {
-  let stakingContract: LatticeStakingPoolInstance,
-    ltxContract: LatticeTokenInstance;
+const totalIncreasedChainTime = (increaseBy?: number) => {
+  if (global.totalIncreasedChainTime === undefined) {
+    global.totalIncreasedChainTime = 0;
+  }
+  if (increaseBy !== undefined) {
+    global.totalIncreasedChainTime += increaseBy;
+  }
+  return global.totalIncreasedChainTime;
+};
+
+describe("LatticeStakingPool: deposit", () => {
+  let accounts: Signer[];
+  let stakingContract: LatticeStakingPool, ltxContract: LatticeToken;
+
+  beforeEach(async () => {
+    accounts = await ethers.getSigners();
+
+    const LatticeTokenFactory = await ethers.getContractFactory("LatticeToken");
+
+    const LatticeStakingPoolFactory = await ethers.getContractFactory(
+      "LatticeStakingPool"
+    );
+
+    ltxContract = await LatticeTokenFactory.deploy();
+    stakingContract = await LatticeStakingPoolFactory.deploy(
+      ltxContract.address
+    );
+  });
 
   const getProject = async (projectId: number) => {
-    const response = (await stakingContract.projects(projectId)) as any;
+    const response = await stakingContract.projects(projectId);
 
     return {
       name: response.name,
-      totalAmountStaked: (response.totalAmountStaked as BN).toNumber(),
-      numberOfPools: (response.numberOfPools as BN).toNumber(),
+      totalAmountStaked: response.totalAmountStaked.toNumber(),
+      numberOfPools: response.numberOfPools.toNumber(),
       startTimestamp: DateTime.fromMillis(
-        (response.startTimestamp as BN).toNumber() * 1000
+        response.startTimestamp.toNumber() * 1000
       ),
       endTimestamp: DateTime.fromMillis(
-        (response.endTimestamp as BN).toNumber() * 1000
+        response.endTimestamp.toNumber() * 1000
       ),
     };
   };
@@ -37,34 +58,31 @@ contract("LatticeStakingPool: deposit", (accounts) => {
     start: DateTime,
     end: DateTime
   ) => {
-    const trxResponse = await stakingContract.addProject(
-      name,
-      epochFromDateTime(start),
-      epochFromDateTime(end),
-      {
-        from: accounts[0],
-      }
-    );
+    const trxResponse = await stakingContract
+      .connect(accounts[0])
+      .addProject(name, epochFromDateTime(start), epochFromDateTime(end));
+
+    const trxReceipt = await trxResponse.wait();
 
     const projectId = (await stakingContract.numberOfProjects()).toNumber() - 1;
 
     return {
       trxResponse,
+      trxReceipt,
+      events:
+        trxReceipt.events?.filter(
+          (ev) => ev.address === stakingContract.address
+        ) ?? [],
       response: await getProject(projectId),
     };
   };
 
   const getStakingPool = async (projectId: number, poolId: number) => {
-    const response = (await stakingContract.stakingPoolInfo(
-      projectId,
-      poolId
-    )) as any;
+    const response = await stakingContract.stakingPoolInfo(projectId, poolId);
 
     return {
-      maxStakingAmountPerUser: (
-        response.maxStakingAmountPerUser as BN
-      ).toNumber(),
-      totalAmountStaked: (response.totalAmountStaked as BN).toNumber(),
+      maxStakingAmountPerUser: response.maxStakingAmountPerUser.toNumber(),
+      totalAmountStaked: response.totalAmountStaked.toNumber(),
     };
   };
 
@@ -72,19 +90,21 @@ contract("LatticeStakingPool: deposit", (accounts) => {
     projectId: number,
     maxStakingAmountPerUser: number
   ) => {
-    const trxResponse = await stakingContract.addStakingPool(
-      projectId,
-      maxStakingAmountPerUser,
-      {
-        from: accounts[0],
-      }
-    );
+    const trxResponse = await stakingContract
+      .connect(accounts[0])
+      .addStakingPool(projectId, maxStakingAmountPerUser);
+    const trxReceipt = await trxResponse.wait();
 
     const poolId =
       (await stakingContract.numberOfPools(projectId)).toNumber() - 1;
 
     return {
       trxResponse,
+      trxReceipt,
+      events:
+        trxReceipt.events?.filter(
+          (ev) => ev.address === stakingContract.address
+        ) ?? [],
       response: await getStakingPool(projectId, poolId),
     };
   };
@@ -93,19 +113,19 @@ contract("LatticeStakingPool: deposit", (accounts) => {
     projectId: number,
     poolId: number,
     amount: number,
-    from: string
+    from: Signer
   ) => {
-    const trxResponse = await stakingContract.deposit(
-      projectId,
-      poolId,
-      amount,
-      {
-        from,
-      }
-    );
+    const trxResponse = await stakingContract
+      .connect(from)
+      .deposit(projectId, poolId, amount);
+    const trxReceipt = await trxResponse.wait();
 
     const userStakedAmount = (
-      await stakingContract.userStakedAmount(projectId, poolId, from)
+      await stakingContract.userStakedAmount(
+        projectId,
+        poolId,
+        await from.getAddress()
+      )
     ).toNumber();
 
     const project = await getProject(projectId);
@@ -113,6 +133,11 @@ contract("LatticeStakingPool: deposit", (accounts) => {
 
     return {
       trxResponse,
+      trxReceipt,
+      events:
+        trxReceipt.events?.filter(
+          (ev) => ev.address === stakingContract.address
+        ) ?? [],
       userStakedAmount,
       project,
       pool,
@@ -122,105 +147,68 @@ contract("LatticeStakingPool: deposit", (accounts) => {
   const withdrawFunds = async (
     projectId: number,
     poolId: number,
-    from: string
+    from: Signer
   ) => {
-    const trxResponse = await stakingContract.withdraw(projectId, poolId, {
-      from,
-    });
+    const trxResponse = await stakingContract
+      .connect(from)
+      .withdraw(projectId, poolId);
+
+    const trxReceipt = await trxResponse.wait();
 
     const didUserWithdrawFunds = await stakingContract.didUserWithdrawFunds(
       projectId,
       poolId,
-      from
+      await from.getAddress()
     );
 
     return {
       trxResponse,
+      trxReceipt,
+      events:
+        trxReceipt.events?.filter(
+          (ev) => ev.address === stakingContract.address
+        ) ?? [],
       didUserWithdrawFunds,
     };
   };
 
-  const setChainTimestamp = async (timestamp: DateTime) => {
-    return await new Promise((rs, rj) => {
-      if (
-        typeof web3.currentProvider === "object" &&
-        web3.currentProvider !== null &&
-        web3.currentProvider.send !== undefined
-      ) {
-        web3.currentProvider.send(
-          {
-            jsonrpc: "2.0",
-            method: "evm_mine",
-            id: Date.now(),
-            params: [epochFromDateTime(timestamp)],
-          },
-          (error, res) => (error ? rj(error) : rs(res))
-        );
-      } else {
-        rj(Error("Unable to set chain timestamp"));
-      }
-    });
-  };
-
-  const approveLtx = async (from: string, to: string, amount: number) => {
-    await ltxContract.approve(to, amount, { from });
-  };
-
-  const transferLtx = async (from: string, to: string, amount: number) => {
-    await ltxContract.transfer(to, amount, { from });
-  };
-
-  const allowanceLtx = async (from: string, to: string) => {
-    return (await ltxContract.allowance(from, to)).toNumber();
-  };
-
-  const balanceLtx = async (account: string) => {
-    return (await ltxContract.balanceOf(account)).toNumber();
-  };
-
-  // Reset contract states
-  beforeEach(async () => {
-    ltxContract = await LatticeToken.new();
-    stakingContract = await LatticeStakingPool.new(ltxContract.address);
-  });
-
-  // Time traveling code /*--
-  let futureSandbox: SinonSandbox,
-    originalTime: DateTime | null = null;
-
-  beforeEach(async () => {
-    futureSandbox = sinon.createSandbox();
-  });
-
-  afterEach(async () => {
-    if (originalTime) {
-      futureSandbox.restore();
-      originalTime = null;
-      await setChainTimestamp(DateTime.now());
+  const increaseChainTime = async (durationLike: DurationLike) => {
+    try {
+      const duration = Duration.fromDurationLike(durationLike);
+      const increaseBy = Math.floor(duration.as("seconds"));
+      await ethers.provider.send("evm_increaseTime", [increaseBy]);
+      totalIncreasedChainTime(increaseBy);
+      return;
+    } catch (e) {
+      throw new Error(`Unable to set chain timestamp ->\n${e}`);
     }
-  });
-
-  const timeTravel = async (timestamp: DateTime) => {
-    originalTime = DateTime.fromJSDate(new Date());
-    futureSandbox.restore();
-    futureSandbox.stub(DateTime, "now").callsFake(() => {
-      if (originalTime) {
-        return timestamp.plus(
-          DateTime.fromJSDate(new Date()).diff(originalTime)
-        );
-      } else {
-        throw new Error("Unable to produce future date");
-      }
-    });
-    await setChainTimestamp(timestamp);
   };
-  // Time traveling code --*/
+
+  const approveLtx = async (from: Signer, to: string, amount: number) => {
+    await (await ltxContract.connect(from).approve(to, amount)).wait();
+  };
+
+  const transferLtx = async (from: Signer, to: string, amount: number) => {
+    await (await ltxContract.connect(from).transfer(to, amount)).wait();
+  };
+
+  const allowanceLtx = async (from: Signer, to: string) => {
+    return (
+      await ltxContract.allowance(await from.getAddress(), to)
+    ).toNumber();
+  };
+
+  const balanceLtx = async (account: Signer) => {
+    return (await ltxContract.balanceOf(await account.getAddress())).toNumber();
+  };
 
   let project: Awaited<ReturnType<typeof createProject>>;
   let pools: Awaited<ReturnType<typeof createStakingPool>>[] = [];
   beforeEach(async () => {
     const name = "project-a";
-    const now = DateTime.now().plus({ hours: 1 });
+    const now = DateTime.now()
+      .plus({ hours: 1 })
+      .plus({ seconds: totalIncreasedChainTime() });
     const after = now.plus({ days: 7 });
 
     project = await createProject(name, now, after);
@@ -228,54 +216,43 @@ contract("LatticeStakingPool: deposit", (accounts) => {
       pools.push(await createStakingPool(0, i * 4000 * 1e8));
     }
 
-    await transferLtx(accounts[0], accounts[1], 10000 * 1e8);
+    await transferLtx(accounts[0], await accounts[1].getAddress(), 10000 * 1e8);
     await approveLtx(accounts[1], stakingContract.address, 8000 * 1e8);
   });
 
   describe("Makes a deposit", () => {
     it("User has not staked before", async () => {
-      await timeTravel(DateTime.now().plus({ hours: 2 }));
+      await increaseChainTime({ hours: 2 });
 
       const amount = 3000 * 1e8;
 
       const response = await makeDeposit(0, 1, amount, accounts[1]);
 
-      assert.equal(response.userStakedAmount, amount);
-      assert.equal(response.project.totalAmountStaked, amount);
-      assert.equal(response.pool.totalAmountStaked, amount);
+      expect(response.userStakedAmount).to.equal(amount);
+      expect(response.project.totalAmountStaked).to.equal(amount);
+      expect(response.pool.totalAmountStaked).to.equal(amount);
 
       const balance = await balanceLtx(accounts[1]);
-      assert.equal(balance, 7000 * 1e8);
+      expect(balance).to.equal(7000 * 1e8);
 
-      assert.equal(response.trxResponse.logs.length, 1);
-      assert.equal(response.trxResponse.logs[0].event, "Deposit");
-      assert.equal(
-        (response.trxResponse.logs[0] as Truffle.TransactionLog<Deposit>).args
-          ._user,
-        accounts[1]
+      expect(response.events.length).to.equal(1);
+      expect(response.events[0].event).to.equal("Deposit");
+      expect((response.events[0] as DepositEvent).args._user).to.equal(
+        await accounts[1].getAddress()
       );
-      assert.equal(
-        (
-          response.trxResponse.logs[0] as Truffle.TransactionLog<Deposit>
-        ).args._projectId.toNumber(),
-        0
-      );
-      assert.equal(
-        (
-          response.trxResponse.logs[0] as Truffle.TransactionLog<Deposit>
-        ).args._poolId.toNumber(),
-        1
-      );
-      assert.equal(
-        (
-          response.trxResponse.logs[0] as Truffle.TransactionLog<Deposit>
-        ).args._amount.toNumber(),
-        amount
-      );
+      expect(
+        (response.events[0] as DepositEvent).args._projectId.toNumber()
+      ).to.equal(0);
+      expect(
+        (response.events[0] as DepositEvent).args._poolId.toNumber()
+      ).to.equal(1);
+      expect(
+        (response.events[0] as DepositEvent).args._amount.toNumber()
+      ).to.equal(amount);
     });
 
     it("User has staked before", async () => {
-      await timeTravel(DateTime.now().plus({ hours: 2 }));
+      await increaseChainTime({ hours: 2 });
 
       const previouslyStaked = 2000 * 1e8;
 
@@ -287,50 +264,41 @@ contract("LatticeStakingPool: deposit", (accounts) => {
 
       const totalStaked = amount + previouslyStaked;
 
-      assert.equal(response.userStakedAmount, totalStaked);
-      assert.equal(response.project.totalAmountStaked, totalStaked);
-      assert.equal(response.pool.totalAmountStaked, totalStaked);
+      expect(response.userStakedAmount).to.equal(totalStaked);
+      expect(response.project.totalAmountStaked).to.equal(totalStaked);
+      expect(response.pool.totalAmountStaked).to.equal(totalStaked);
 
       const balance = await balanceLtx(accounts[1]);
-      assert.equal(balance, 5000 * 1e8);
+      expect(balance).to.equal(5000 * 1e8);
 
-      assert.equal(response.trxResponse.logs.length, 1);
-      assert.equal(response.trxResponse.logs[0].event, "Deposit");
-      assert.equal(
-        (response.trxResponse.logs[0] as Truffle.TransactionLog<Deposit>).args
-          ._user,
-        accounts[1]
+      expect(response.events.length).to.equal(1);
+      expect(response.events[0].event).to.equal("Deposit");
+      expect((response.events[0] as DepositEvent).args._user).to.equal(
+        await accounts[1].getAddress()
       );
-      assert.equal(
-        (
-          response.trxResponse.logs[0] as Truffle.TransactionLog<Deposit>
-        ).args._projectId.toNumber(),
-        0
-      );
-      assert.equal(
-        (
-          response.trxResponse.logs[0] as Truffle.TransactionLog<Deposit>
-        ).args._poolId.toNumber(),
-        2
-      );
-      assert.equal(
-        (
-          response.trxResponse.logs[0] as Truffle.TransactionLog<Deposit>
-        ).args._amount.toNumber(),
-        amount
-      );
+      expect(
+        (response.events[0] as DepositEvent).args._projectId.toNumber()
+      ).to.equal(0);
+      expect(
+        (response.events[0] as DepositEvent).args._poolId.toNumber()
+      ).to.equal(2);
+      expect(
+        (response.events[0] as DepositEvent).args._amount.toNumber()
+      ).to.equal(amount);
     });
   });
 
   it("Rejects 0 value amounts", async () => {
     try {
-      const response = await stakingContract.deposit(0, 0, 0, {
-        from: accounts[1],
-      });
+      const response = await stakingContract
+        .connect(accounts[1])
+        .deposit(0, 0, 0);
+      await response.wait();
+
       throw new Error("Method should throw");
     } catch (e) {
       if (e instanceof Error) {
-        assert.match(e.message, /deposit: Amount not specified/i);
+        expect(e.message).to.match(/deposit: Amount not specified/i);
       } else {
         throw new Error("Method should throw an Error");
       }
@@ -339,13 +307,15 @@ contract("LatticeStakingPool: deposit", (accounts) => {
 
   it("Rejects invalid project ID", async () => {
     try {
-      const response = await stakingContract.deposit(1, 0, 1000 * 1e8, {
-        from: accounts[1],
-      });
+      const response = await stakingContract
+        .connect(accounts[1])
+        .deposit(1, 0, 1000 * 1e8);
+      await response.wait();
+
       throw new Error("Method should throw");
     } catch (e) {
       if (e instanceof Error) {
-        assert.match(e.message, /deposit: Invalid project ID/i);
+        expect(e.message).to.match(/deposit: Invalid project ID/i);
       } else {
         throw new Error("Method should throw an Error");
       }
@@ -354,13 +324,15 @@ contract("LatticeStakingPool: deposit", (accounts) => {
 
   it("Rejects invalid pool ID", async () => {
     try {
-      const response = await stakingContract.deposit(0, 3, 1000 * 1e8, {
-        from: accounts[1],
-      });
+      const response = await stakingContract
+        .connect(accounts[1])
+        .deposit(0, 3, 1000 * 1e8);
+      await response.wait();
+
       throw new Error("Method should throw");
     } catch (e) {
       if (e instanceof Error) {
-        assert.match(e.message, /deposit: Invalid pool ID/i);
+        expect(e.message).to.match(/deposit: Invalid pool ID/i);
       } else {
         throw new Error("Method should throw an Error");
       }
@@ -368,16 +340,17 @@ contract("LatticeStakingPool: deposit", (accounts) => {
   });
 
   it("Rejects invalid stake time (endTimestamp)", async () => {
-    await timeTravel(DateTime.now().plus({ year: 1 }));
+    await increaseChainTime({ year: 1 });
     try {
-      const response = await stakingContract.deposit(0, 0, 1000 * 1e8, {
-        from: accounts[1],
-      });
+      const response = await stakingContract
+        .connect(accounts[1])
+        .deposit(0, 0, 1000 * 1e8);
+      await response.wait();
+
       throw new Error("Method should throw");
     } catch (e) {
       if (e instanceof Error) {
-        assert.match(
-          e.message,
+        expect(e.message).to.match(
           /deposit: Staking no longer permitted for this project/i
         );
       } else {
@@ -388,14 +361,15 @@ contract("LatticeStakingPool: deposit", (accounts) => {
 
   it("Rejects invalid stake time (startTimestamp)", async () => {
     try {
-      const response = await stakingContract.deposit(0, 0, 1000 * 1e8, {
-        from: accounts[1],
-      });
+      const response = await stakingContract
+        .connect(accounts[1])
+        .deposit(0, 0, 1000 * 1e8);
+      await response.wait();
+
       throw new Error("Method should throw");
     } catch (e) {
       if (e instanceof Error) {
-        assert.match(
-          e.message,
+        expect(e.message).to.match(
           /deposit: Staking is not yet permitted for this project/i
         );
       } else {
@@ -406,16 +380,17 @@ contract("LatticeStakingPool: deposit", (accounts) => {
 
   describe("Rejects user cannot stake more than max amount", () => {
     it("User has not staked before", async () => {
-      await timeTravel(DateTime.now().plus({ hours: 2 }));
+      await increaseChainTime({ hours: 2 });
       try {
-        const response = await stakingContract.deposit(0, 1, 5000 * 1e8, {
-          from: accounts[1],
-        });
+        const response = await stakingContract
+          .connect(accounts[1])
+          .deposit(0, 1, 5000 * 1e8);
+        await response.wait();
+
         throw new Error("Method should throw");
       } catch (e) {
         if (e instanceof Error) {
-          assert.match(
-            e.message,
+          expect(e.message).to.match(
             /deposit: Cannot exceed max staking amount per user/i
           );
         } else {
@@ -425,19 +400,20 @@ contract("LatticeStakingPool: deposit", (accounts) => {
     });
 
     it("User has staked before", async () => {
-      await timeTravel(DateTime.now().plus({ hours: 2 }));
+      await increaseChainTime({ hours: 2 });
 
       await makeDeposit(0, 1, 3000 * 1e8, accounts[1]);
 
       try {
-        const response = await stakingContract.deposit(0, 1, 2000 * 1e8, {
-          from: accounts[1],
-        });
+        const response = await stakingContract
+          .connect(accounts[1])
+          .deposit(0, 1, 2000 * 1e8);
+        await response.wait();
+
         throw new Error("Method should throw");
       } catch (e) {
         if (e instanceof Error) {
-          assert.match(
-            e.message,
+          expect(e.message).to.match(
             /deposit: Cannot exceed max staking amount per user/i
           );
         } else {

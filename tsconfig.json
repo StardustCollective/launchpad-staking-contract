@@ -1,16 +1,12 @@
 {
-  "files": ["hardhat.config.ts"],
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "build", "cache", "artifacts"],
   "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
     "strict": true,
-    "noImplicitAny": false,
-    "target": "ES2021",
-    "module": "CommonJS",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "types": ["@types/node", "@types/chai", "@types/mocha"],
-    "typeRoots": ["./node_modules/@types", "./types"]
-  }
+    "outDir": "dist",
+    "declaration": true
+  },
+  "include": ["./scripts", "./test", "./typechain-types"],
+  "files": ["./hardhat.config.ts"]
 }
