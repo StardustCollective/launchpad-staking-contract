@@ -1,9 +1,10 @@
 name: Feature Branch Build
 on:
   push:
-    branches-ignore:
-      - deploy/staging
-      - deploy/production
+    branches:
+      - main
+      - development/**
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,14 +14,12 @@ jobs:
         node-version: [12.x]
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Yarn Install
-        run: |
-          yarn install
-      - name: Run Truffle tests
-        run: |
-          yarn test
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Yarn Install
+      run: yarn
+    - name: Run Tests
+      run: yarn test

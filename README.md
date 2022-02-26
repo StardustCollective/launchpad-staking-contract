@@ -5,49 +5,47 @@
 
 ## Getting Started
 
-This project was built using `Node 12`, `Solidity 0.8.11`, `Truffle 5.4` and `Typescript 4.5`, to start you can install the project dependencies using `yarn`.
+This project was built using `Node 12`, `Solidity 0.8.11`, `Hardhat 2.8` and `TypeScript 4.5`, to start you can install the project dependencies using `yarn`.
 
 ```
 $ yarn install
 ```
 
-## Truffle and Contract Development
+## Harhat and Contract Development
 
-For Ethereum Contract Development we decided to use Truffle as our main tool for development and testing purposes, as well decided to use the [`typechain`](https://github.com/dethcrypto/TypeChain) package to generate static typing for contract ABIs.
+For Ethereum Contract Development we decided to use Hardhat as our tool for development and testing purposes as it offers out-of-the-box support for TypeScript, as well decided to use the [`typechain`](https://github.com/dethcrypto/TypeChain) package to generate static typing for contract ABIs.
 
 ### Development
 
-You can start right away by using the Truffle develop console the following way.
+The Hardhat Runtime Environment provides easy integration with different plugins you may use, in general terms is up to you how you want to develop using hardhat. Out-of-the-box support for different core tasks like testing and deploying are available.
 
-```
-$ yarn truffle develop
-```
+You can check the hardhat docs for more info.
+https://hardhat.org/getting-started/
 
-You can find more details about the console [here](https://trufflesuite.com/docs/truffle/getting-started/using-truffle-develop-and-the-console) and available Truffle commands [here](https://trufflesuite.com/docs/truffle/reference/truffle-commands.html).
+### Tests & Coverage
 
-### Tests
+Hardhat has out-of-the-box tests with Mocha-Chai and Waffle. As well provides code coverage.
 
-For testing, Truffle comes integrated with Mocha-Chai tests, so you can start writting and running tests pretty easily.
-
+You can run tests using
 ```
 $ yarn test
 ```
 
-Differences between normal JavaScript tests and Truffle tests are basically one. You would use `contract()` instead of `describe()`, this will deploy a fresh contract over the test network for every `contract()` call found. Neveretheless you can use `describe()` to structure your tests. More details about Truffle testing can be found [here](https://trufflesuite.com/docs/truffle/testing/testing-your-contracts.html).
+and run coverage reports using
+```
+$ yarn coverage
+```
 
-Ohh ps: you can write as well tests using solidity =)
-
-### Build
-
+### Compile
 For building contracts and generate types you can use.
 
 ```
 $ yarn build
 ```
 
-Compiled contracts will be stored in the [build](build/) folder and generated types in the [types/truffle-contracts](types/truffle-contracts/).
+Compiled contracts will be stored in the [artifacts](artifacts/) folder and generated types in the [typechain-types](typechain-types/).
 
-You can start using contract types right away by importing types from [types/truffle-contracts](types/truffle-contracts/) or using the `artifact.require(contractName: string)` function.
+You can start using contract types right away by importing types from [typechain-types](typechain-types/) or using the HRE function `ethers.getContractFactory(contractName: string)`.
 
 ## License
 

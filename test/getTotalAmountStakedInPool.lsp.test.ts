@@ -1,32 +1,53 @@
-import { DateTime } from "luxon";
-import sinon, { SinonSandbox } from "sinon";
-import { LatticeTokenInstance } from "../types/truffle-contracts";
-import {
-  LatticeStakingPoolInstance,
-} from "../types/truffle-contracts/LatticeStakingPool";
-
-const LatticeToken = artifacts.require("LatticeToken");
-const LatticeStakingPool = artifacts.require("LatticeStakingPool");
+import { DateTime, DurationLike, Duration } from "luxon";
+import { expect } from "chai";
+import { Signer } from "ethers";
+import { ethers } from "hardhat";
+import { LatticeToken, LatticeStakingPool } from "./../typechain-types";
 
 const epochFromDateTime = (datetime: DateTime) =>
   Math.floor(datetime.toMillis() / 1000);
 
-contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
-  let stakingContract: LatticeStakingPoolInstance,
-    ltxContract: LatticeTokenInstance;
+const totalIncreasedChainTime = (increaseBy?: number) => {
+  if (global.totalIncreasedChainTime === undefined) {
+    global.totalIncreasedChainTime = 0;
+  }
+  if (increaseBy !== undefined) {
+    global.totalIncreasedChainTime += increaseBy;
+  }
+  return global.totalIncreasedChainTime;
+};
+
+describe("LatticeStakingPool: getTotalAmountStakedInPool", () => {
+  let accounts: Signer[];
+  let stakingContract: LatticeStakingPool, ltxContract: LatticeToken;
+
+  beforeEach(async () => {
+    accounts = await ethers.getSigners();
+
+    const LatticeTokenFactory = await ethers.getContractFactory("LatticeToken");
+
+    const LatticeStakingPoolFactory = await ethers.getContractFactory(
+      "LatticeStakingPool"
+    );
+
+    ltxContract = await LatticeTokenFactory.deploy();
+    stakingContract = await LatticeStakingPoolFactory.deploy(
+      ltxContract.address
+    );
+  });
 
   const getProject = async (projectId: number) => {
-    const response = (await stakingContract.projects(projectId)) as any;
+    const response = await stakingContract.projects(projectId);
 
     return {
       name: response.name,
-      totalAmountStaked: (response.totalAmountStaked as BN).toNumber(),
-      numberOfPools: (response.numberOfPools as BN).toNumber(),
+      totalAmountStaked: response.totalAmountStaked.toNumber(),
+      numberOfPools: response.numberOfPools.toNumber(),
       startTimestamp: DateTime.fromMillis(
-        (response.startTimestamp as BN).toNumber() * 1000
+        response.startTimestamp.toNumber() * 1000
       ),
       endTimestamp: DateTime.fromMillis(
-        (response.endTimestamp as BN).toNumber() * 1000
+        response.endTimestamp.toNumber() * 1000
       ),
     };
   };
@@ -36,34 +57,31 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
     start: DateTime,
     end: DateTime
   ) => {
-    const trxResponse = await stakingContract.addProject(
-      name,
-      epochFromDateTime(start),
-      epochFromDateTime(end),
-      {
-        from: accounts[0],
-      }
-    );
+    const trxResponse = await stakingContract
+      .connect(accounts[0])
+      .addProject(name, epochFromDateTime(start), epochFromDateTime(end));
+
+    const trxReceipt = await trxResponse.wait();
 
     const projectId = (await stakingContract.numberOfProjects()).toNumber() - 1;
 
     return {
       trxResponse,
+      trxReceipt,
+      events:
+        trxReceipt.events?.filter(
+          (ev) => ev.address === stakingContract.address
+        ) ?? [],
       response: await getProject(projectId),
     };
   };
 
   const getStakingPool = async (projectId: number, poolId: number) => {
-    const response = (await stakingContract.stakingPoolInfo(
-      projectId,
-      poolId
-    )) as any;
+    const response = await stakingContract.stakingPoolInfo(projectId, poolId);
 
     return {
-      maxStakingAmountPerUser: (
-        response.maxStakingAmountPerUser as BN
-      ).toNumber(),
-      totalAmountStaked: (response.totalAmountStaked as BN).toNumber(),
+      maxStakingAmountPerUser: response.maxStakingAmountPerUser.toNumber(),
+      totalAmountStaked: response.totalAmountStaked.toNumber(),
     };
   };
 
@@ -71,19 +89,21 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
     projectId: number,
     maxStakingAmountPerUser: number
   ) => {
-    const trxResponse = await stakingContract.addStakingPool(
-      projectId,
-      maxStakingAmountPerUser,
-      {
-        from: accounts[0],
-      }
-    );
+    const trxResponse = await stakingContract
+      .connect(accounts[0])
+      .addStakingPool(projectId, maxStakingAmountPerUser);
+    const trxReceipt = await trxResponse.wait();
 
     const poolId =
       (await stakingContract.numberOfPools(projectId)).toNumber() - 1;
 
     return {
       trxResponse,
+      trxReceipt,
+      events:
+        trxReceipt.events?.filter(
+          (ev) => ev.address === stakingContract.address
+        ) ?? [],
       response: await getStakingPool(projectId, poolId),
     };
   };
@@ -92,19 +112,19 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
     projectId: number,
     poolId: number,
     amount: number,
-    from: string
+    from: Signer
   ) => {
-    const trxResponse = await stakingContract.deposit(
-      projectId,
-      poolId,
-      amount,
-      {
-        from,
-      }
-    );
+    const trxResponse = await stakingContract
+      .connect(from)
+      .deposit(projectId, poolId, amount);
+    const trxReceipt = await trxResponse.wait();
 
     const userStakedAmount = (
-      await stakingContract.userStakedAmount(projectId, poolId, from)
+      await stakingContract.userStakedAmount(
+        projectId,
+        poolId,
+        await from.getAddress()
+      )
     ).toNumber();
 
     const project = await getProject(projectId);
@@ -112,6 +132,11 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
 
     return {
       trxResponse,
+      trxReceipt,
+      events:
+        trxReceipt.events?.filter(
+          (ev) => ev.address === stakingContract.address
+        ) ?? [],
       userStakedAmount,
       project,
       pool,
@@ -121,105 +146,68 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
   const withdrawFunds = async (
     projectId: number,
     poolId: number,
-    from: string
+    from: Signer
   ) => {
-    const trxResponse = await stakingContract.withdraw(projectId, poolId, {
-      from,
-    });
+    const trxResponse = await stakingContract
+      .connect(from)
+      .withdraw(projectId, poolId);
+
+    const trxReceipt = await trxResponse.wait();
 
     const didUserWithdrawFunds = await stakingContract.didUserWithdrawFunds(
       projectId,
       poolId,
-      from
+      await from.getAddress()
     );
 
     return {
       trxResponse,
+      trxReceipt,
+      events:
+        trxReceipt.events?.filter(
+          (ev) => ev.address === stakingContract.address
+        ) ?? [],
       didUserWithdrawFunds,
     };
   };
 
-  const setChainTimestamp = async (timestamp: DateTime) => {
-    return await new Promise((rs, rj) => {
-      if (
-        typeof web3.currentProvider === "object" &&
-        web3.currentProvider !== null &&
-        web3.currentProvider.send !== undefined
-      ) {
-        web3.currentProvider.send(
-          {
-            jsonrpc: "2.0",
-            method: "evm_mine",
-            id: Date.now(),
-            params: [epochFromDateTime(timestamp)],
-          },
-          (error, res) => (error ? rj(error) : rs(res))
-        );
-      } else {
-        rj(Error("Unable to set chain timestamp"));
-      }
-    });
-  };
-
-  const approveLtx = async (from: string, to: string, amount: number) => {
-    await ltxContract.approve(to, amount, { from });
-  };
-
-  const transferLtx = async (from: string, to: string, amount: number) => {
-    await ltxContract.transfer(to, amount, { from });
-  };
-
-  const allowanceLtx = async (from: string, to: string) => {
-    return (await ltxContract.allowance(from, to)).toNumber();
-  };
-
-  const balanceLtx = async (account: string) => {
-    return (await ltxContract.balanceOf(account)).toNumber();
-  };
-
-  // Reset contract states
-  beforeEach(async () => {
-    ltxContract = await LatticeToken.new();
-    stakingContract = await LatticeStakingPool.new(ltxContract.address);
-  });
-
-  // Time traveling code /*--
-  let futureSandbox: SinonSandbox,
-    originalTime: DateTime | null = null;
-
-  beforeEach(async () => {
-    futureSandbox = sinon.createSandbox();
-  });
-
-  afterEach(async () => {
-    if (originalTime) {
-      futureSandbox.restore();
-      originalTime = null;
-      await setChainTimestamp(DateTime.now());
+  const increaseChainTime = async (durationLike: DurationLike) => {
+    try {
+      const duration = Duration.fromDurationLike(durationLike);
+      const increaseBy = Math.floor(duration.as("seconds"));
+      await ethers.provider.send("evm_increaseTime", [increaseBy]);
+      totalIncreasedChainTime(increaseBy);
+      return;
+    } catch (e) {
+      throw new Error(`Unable to set chain timestamp ->\n${e}`);
     }
-  });
-
-  const timeTravel = async (timestamp: DateTime) => {
-    originalTime = DateTime.fromJSDate(new Date());
-    futureSandbox.restore();
-    futureSandbox.stub(DateTime, "now").callsFake(() => {
-      if (originalTime) {
-        return timestamp.plus(
-          DateTime.fromJSDate(new Date()).diff(originalTime)
-        );
-      } else {
-        throw new Error("Unable to produce future date");
-      }
-    });
-    await setChainTimestamp(timestamp);
   };
-  // Time traveling code --*/
+
+  const approveLtx = async (from: Signer, to: string, amount: number) => {
+    await (await ltxContract.connect(from).approve(to, amount)).wait();
+  };
+
+  const transferLtx = async (from: Signer, to: string, amount: number) => {
+    await (await ltxContract.connect(from).transfer(to, amount)).wait();
+  };
+
+  const allowanceLtx = async (from: Signer, to: string) => {
+    return (
+      await ltxContract.allowance(await from.getAddress(), to)
+    ).toNumber();
+  };
+
+  const balanceLtx = async (account: Signer) => {
+    return (await ltxContract.balanceOf(await account.getAddress())).toNumber();
+  };
 
   let project: Awaited<ReturnType<typeof createProject>>;
   let pools: Awaited<ReturnType<typeof createStakingPool>>[] = [];
   beforeEach(async () => {
     const name = "project-a";
-    const now = DateTime.now().plus({ hours: 1 });
+    const now = DateTime.now()
+      .plus({ hours: 1 })
+      .plus({ seconds: totalIncreasedChainTime() });
     const after = now.plus({ days: 7 });
 
     project = await createProject(name, now, after);
@@ -227,12 +215,12 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
       pools.push(await createStakingPool(0, i * 4000 * 1e8));
     }
 
-    await transferLtx(accounts[0], accounts[1], 10000 * 1e8);
+    await transferLtx(accounts[0], await accounts[1].getAddress(), 10000 * 1e8);
     await approveLtx(accounts[1], stakingContract.address, 8000 * 1e8);
   });
 
   it("Returns correct amount", async () => {
-    await timeTravel(DateTime.now().plus({ hours: 2 }));
+    await increaseChainTime({ hours: 2 });
 
     await makeDeposit(0, 0, 3000 * 1e8, accounts[1]);
 
@@ -240,11 +228,11 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
       await stakingContract.getTotalAmountStakedInPool(0, 0)
     ).toNumber();
 
-    assert.equal(totalAmountStaked, 3000 * 1e8);
+    expect(totalAmountStaked).to.equal(3000 * 1e8);
   });
 
   it("Rejects invalid project ID", async () => {
-    await timeTravel(DateTime.now().plus({ hours: 2 }));
+    await increaseChainTime({ hours: 2 });
 
     await makeDeposit(0, 0, 3000 * 1e8, accounts[1]);
 
@@ -254,8 +242,7 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
       throw new Error("Method should throw");
     } catch (e) {
       if (e instanceof Error) {
-        assert.match(
-          e.message,
+        expect(e.message).to.match(
           /getTotalAmountStakedInPool: Invalid project ID/i
         );
       } else {
@@ -265,7 +252,7 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
   });
 
   it("Rejects invalid pool ID", async () => {
-    await timeTravel(DateTime.now().plus({ hours: 2 }));
+    await increaseChainTime({ hours: 2 });
 
     await makeDeposit(0, 0, 3000 * 1e8, accounts[1]);
 
@@ -275,7 +262,9 @@ contract("LatticeStakingPool: getTotalAmountStakedInPool", (accounts) => {
       throw new Error("Method should throw");
     } catch (e) {
       if (e instanceof Error) {
-        assert.match(e.message, /getTotalAmountStakedInPool: Invalid pool ID/i);
+        expect(e.message).to.match(
+          /getTotalAmountStakedInPool: Invalid pool ID/i
+        );
       } else {
         throw new Error("Method should throw an Error");
       }

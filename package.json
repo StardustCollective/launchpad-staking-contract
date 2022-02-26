@@ -6,29 +6,50 @@
   "author": "Stardust Collective <info@stardustcollective.org>",
   "license": "UNLICENSED",
   "private": true,
-  "dependencies": {
-    "@openzeppelin/contracts": "4.4.2"
+  "scripts": {
+    "test": "yarn hardhat compile && yarn hardhat test",
+    "build": "yarn hardhat compile",
+    "coverage": "yarn hardhat coverage",
+    "run:hardhat": "yarn hardhat node"
   },
   "devDependencies": {
-    "@typechain/truffle-v5": "^7.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.0.4",
+    "@nomiclabs/hardhat-etherscan": "^3.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.2",
+    "@typechain/ethers-v5": "^9.0.0",
+    "@typechain/hardhat": "^4.0.0",
+    "@types/axios": "^0.14.0",
     "@types/chai": "^4.3.0",
     "@types/luxon": "^2.0.9",
-    "@types/mocha": "^9.0.0",
-    "@types/sinon": "^10.0.8",
-    "ganache-cli": "^6.12.2",
+    "@types/mocha": "^9.1.0",
+    "@types/node": "^17.0.16",
+    "@typescript-eslint/eslint-plugin": "^5.11.0",
+    "@typescript-eslint/parser": "^5.11.0",
+    "axios": "^0.26.0",
+    "chai": "^4.3.6",
+    "cli-table3": "^0.6.1",
+    "commander": "^9.0.0",
+    "dotenv": "^16.0.0",
+    "eslint": "^8.8.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-promise": "^6.0.0",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.5.4",
     "hardhat": "^2.8.3",
-    "luxon": "^2.3.0",
-    "sinon": "^12.0.1",
-    "truffle": "^5.4.29",
-    "ts-node": "^10.4.0",
+    "hardhat-gas-reporter": "^1.0.7",
+    "luxon": "^2.3.1",
+    "prettier": "^2.5.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "solhint": "^3.3.6",
+    "solidity-coverage": "^0.7.19",
+    "ts-node": "^10.5.0",
     "typechain": "^7.0.0",
-    "typescript": "^4.5.4"
+    "typescript": "^4.5.5"
   },
-  "scripts": {
-    "build": "yarn build:contracts && yarn build:types",
-    "build:contracts": "yarn truffle compile",
-    "build:types": "yarn typechain --target=truffle-v5 'build/contracts/*.json'",
-    "start:ganache": "yarn ganache-cli -p 8646",
-    "test": "yarn truffle test"
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.4.2"
   }
 }
