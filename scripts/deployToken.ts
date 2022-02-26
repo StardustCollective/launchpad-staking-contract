@@ -10,26 +10,17 @@ async function main() {
     ]);
   }
 
-  const latticeEnvVarName = `${network.name.toLocaleUpperCase()}_LATTICE_TOKEN`;
-  const latticeTokenAddress = process.env[latticeEnvVarName];
-  if (!latticeTokenAddress) {
-    throw new Error(`Unable to find env variable ${latticeEnvVarName}`);
-  }
-
   console.log(`Network Name: ${network.name}`);
-  console.log(`Lattice Token Address: ${latticeTokenAddress}`);
   console.log(`Signer Address: ${accounts[0].address}`);
 
-  const LatticeStakingPoolFactory = await ethers.getContractFactory(
-    "LatticeStakingPool"
-  );
-  const contract = await LatticeStakingPoolFactory.deploy(latticeTokenAddress);
+  const LatticeTokenFactory = await ethers.getContractFactory("LatticeToken");
+  const contract = await LatticeTokenFactory.deploy();
 
   console.log(`Waiting for transaction: ${contract.deployTransaction.hash}`);
 
   await contract.deployed();
 
-  console.log("LatticeStakingPool deployed to:", contract.address);
+  console.log("LatticeToken deployed to:", contract.address);
 }
 
 main().catch((error) => {

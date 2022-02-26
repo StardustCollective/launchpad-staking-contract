@@ -33,6 +33,13 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    localhost: {
+      url: process.env.LOCALHOST_URL || "",
+      accounts:
+        process.env.LOCALHOST_PK !== undefined
+          ? [process.env.LOCALHOST_PK]
+          : [],
+    },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
       accounts:
